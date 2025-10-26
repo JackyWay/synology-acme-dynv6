@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  acme.sh:
+    image: neilpang/acme.sh:latest
+    container_name: acme-sh
+    restart: unless-stopped
+
+    # Run as root for DSM deployment
+    user: root
+
+    # Use command mode to keep container running
+    command: daemon
+
+    # Environment variables from .env file
+    environment:
+      - DYNV6_TOKEN=${DYNV6_TOKEN}
+      - DOMAIN=${DOMAIN}
+      - EMAIL=${EMAIL}
+      - SYNO_USE_TEMP_ADMIN=${SYNO_USE_TEMP_ADMIN:-1}
+      - SYNO_USERNAME=${SYNO_USERNAME:-}
+      - SYNO_PASSWORD=${SYNO_PASSWORD:-}
+      - SYNO_SCHEME=${SYNO_SCHEME:-http}
+      - SYNO_HOSTNAME=${SYNO_HOSTNAME:-localhost}
+      - SYNO_PORT=${SYNO_PORT:-5000}
+      - SYNO_CERTIFICATE=${SYNO_CERTIFICATE:-acme.sh}
+      - SYNO_CREATE=${SYNO_CREATE:-1}
+      - ACME_SERVER=${ACME_SERVER:-letsencrypt}
+
+    # Volumes for persistent data and DSM access
+    volumes:
+      # Certificate storage (persistent)
+      - ./acme-data:/acme.sh
+
+      # Mount scripts directory for easy execution
+      - ./scripts:/scripts:ro
+
+      # Access to DSM certificate locations (for deployment)
+      # Note: This may need adjustment based on your DSM configuration
+      - /usr/syno/etc/certificate:/usr/syno/etc/certificate
+
+    # Network mode host for accessing DSM API on localhost
+    network_mode: host
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "sh", "-c", "test -f /acme.sh/acme.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
